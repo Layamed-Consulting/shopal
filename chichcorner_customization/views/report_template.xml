@@ -229,8 +229,8 @@
                                 </tbody>
                             </table>
                         </t>
-                        <t t-if="payment_details and payment_details.get('Espèces Bkk')">
-                            <div class="custom_title">Espèces BIKKEMBERGS Mall</div>
+                        <t t-if="payment_details and payment_details.get('Espèces US POLO Mall')">
+                            <div class="custom_title">Espèces US POLO Mall</div>
                             <table class="table table-sm custom_table">
                                 <thead>
                                     <tr>
@@ -240,7 +240,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr t-foreach="payment_details['Espèces Bkk']" t-as="payment">
+                                    <tr t-foreach="payment_details['Espèces US POLO Mall']" t-as="payment">
                                         <td><span t-esc="payment['ticket']"/></td>
                                         <td><span t-esc="payment['cashier']"/></td>
                                         <td>
@@ -249,10 +249,10 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td colspan="2"><strong>Total Espèces BIKKEMBERGS Mall</strong></td>
+                                        <td colspan="2"><strong>Total Espèces US POLO Mall</strong></td>
                                         <td>
                                             <strong>
-                                                <span t-esc="payment_details['totals'].get('Espèces Bkk', 0)"
+                                                <span t-esc="payment_details['totals'].get('Espèces US POLO Mall', 0)"
                                                       t-options='{"widget": "monetary", "display_currency": currency}'/>
                                             </strong>
                                         </td>

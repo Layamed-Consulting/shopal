@@ -25,10 +25,11 @@ class JournalReport(models.AbstractModel):
             'Espèces Principe Mall': [],
             'Espèces AM': [],
             'Banque': [],
-            'Espèces Bkk': [],
+            'Espèces US POLO Mall': [],
             'Espèces ALCOTT Mall': [],
             'Chèque': [],
             'Chèque MDC':[],
+            'Virement': [],
             'Avoir': [],
             'totals': {}
         }
@@ -70,8 +71,8 @@ class JournalReport(models.AbstractModel):
                 elif method_type == 'Espèces AM':
                     payment_details['Espèces AM'].append(payment_info)
 
-                elif method_type == 'Espèces Bkk':
-                    payment_details['Espèces Bkk'].append(payment_info)
+                elif method_type == 'Espèces US POLO Mall':
+                    payment_details['Espèces US POLO Mall'].append(payment_info)
 
                 elif method_type == 'Banque':
                     payment_details['Banque'].append(payment_info)
@@ -82,7 +83,6 @@ class JournalReport(models.AbstractModel):
                 elif method_type == 'Espèces ALCOTT Mall':
                     payment_details['Espèces ALCOTT Mall'].append(payment_info)
 
-
                 if method.name not in payment_details['totals']:
                     payment_details['totals'][method.name] = 0
                 payment_details['totals'][method.name] += payment.amount
@@ -90,13 +90,24 @@ class JournalReport(models.AbstractModel):
         return payment_details
 
     def _get_report_values(self, docids, data=None):
-        current_session = self.env['pos.session'].search([('state', '=', 'opened')], limit=1)
-        if not current_session:
-            return {
-                'orders': [],
-            }
+        session_id = docids[0] if docids else self.env.context.get('active_ids', [False])[0]
+        if not session_id:
+            return {}
 
-        orders = self.env['pos.order'].search([('session_id', '=', current_session.id)])
+        session = self.env['pos.session'].browse(session_id)
+
+        # Crucial: Filtrer explicitement par le POS config_id pour éviter les données croisées
+        config_id = session.config_id.id
+
+        # Récupérer les commandes uniquement pour ce point de vente spécifique
+        domain = [
+            ('session_id', '=', session_id),
+            ('config_id', '=', config_id)
+        ]
+
+        orders = self.env['pos.order'].search(domain)
+
+
         formatted_orders = []
         for order in orders:
             total_qty = sum(line.qty for line in order.lines)
@@ -130,9 +141,12 @@ class JournalReport(models.AbstractModel):
         payment_details = self._get_payment_details(orders)
         refund_details = self._get_refund_details(orders)
         return {
+            'doc': session,
+            'docs': session,
             'orders': formatted_orders,
-            'session_name': current_session.name,
-            'config_name': current_session.config_id.name,
+            'session_name': session.name,
+            'config_name': session.config_id.name,
+            'state': session.state,
             'payment_methods': payment_methods,
             'total_payments': total_payments,
             'payment_details': payment_details,

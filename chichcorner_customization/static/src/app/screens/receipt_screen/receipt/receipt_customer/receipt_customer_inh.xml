@@ -2,12 +2,13 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_receipt_screen.receiptscreen_customer" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
         <xpath expr="//div[@class='before-footer']" position="replace">
+            <!--
             <div class="ticket" style="margin-top:20px;text-align:center;font-size:15px;">
              <t t-if="props.data.name">
-                 <div>--------------------------------</div>
                  <div><b>Ticket de caisse :</b> <t t-esc="props.data.name"/></div>
             </t>
             </div>
+            -->
         </xpath>
         <xpath expr="//div[@class='after-footer']" position="after">
 

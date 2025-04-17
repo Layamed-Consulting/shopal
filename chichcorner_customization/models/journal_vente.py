@@ -83,6 +83,15 @@ class JournalReport(models.AbstractModel):
                 elif method_type == 'Espèces ALCOTT Mall':
                     payment_details['Espèces ALCOTT Mall'].append(payment_info)
 
+                elif method_type == 'Virement':
+                    payment_info.update({
+                        'vir_number': payment.vir_number or '',
+                        'num_client': payment.num_client or '',
+                        'vir_montant': payment.vir_montant,
+                        'date_commande': order.date_commande.strftime('%Y-%m-%d') if order.date_commande else ''
+                    })
+                    payment_details['Virement'].append(payment_info)
+
                 if method.name not in payment_details['totals']:
                     payment_details['totals'][method.name] = 0
                 payment_details['totals'][method.name] += payment.amount

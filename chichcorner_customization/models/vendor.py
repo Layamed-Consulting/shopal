@@ -28,7 +28,27 @@ class PosOrder(models.Model):
     ('ok', 'OK'),
     ('ko', 'KO'),
   ], string="Status", default="ok")
-
+  # New fields for the new payment method
+  vir_number = fields.Char(
+    string='Numéro du virement',
+    help='The number associated with the virtual payment method.'
+  )
+  num_client = fields.Char(
+    string='Num du client',
+    help='The client number for the virtual payment method.'
+  )
+  vir_montant = fields.Float(
+    string='Montant',
+    help='The amount paid using the virtual payment method.'
+  )
+  ref_cmd = fields.Char(
+    string='Reference de la commande',
+    help='Reference of the associated order for the virtual payment.'
+  )
+  date_commande = fields.Date(
+    string='Date Ordre',
+    help='The date when the order was placed for the virtual payment.'
+  )
   cheque_date = fields.Date(string="Date du Chèque", help="Date of the cheque.")
 
 
@@ -41,6 +61,12 @@ class PosOrder(models.Model):
     result['cheque_number'] = ui_order.get('cheque_number')
     result['banque'] = ui_order.get('banque')
     result['cheque_date'] = ui_order.get('cheque_date')
+    # virement part
+    result['vir_number'] = ui_order.get('vir_number')
+    result['num_client'] = ui_order.get('num_client')
+    result['vir_montant'] = ui_order.get('vir_montant')
+    result['ref_cmd'] = ui_order.get('ref_cmd')
+    result['date_commande'] = ui_order.get('date_commande')
     return result
 
 

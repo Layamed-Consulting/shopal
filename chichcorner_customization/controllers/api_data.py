@@ -15,7 +15,7 @@ def validate_api_key(api_key):
     ], limit=1)
     return api_key_record.user_id if api_key_record else None
 
-#product_list_api -- id existe
+#product_list_api -- id existe - deployé
 class DimensionProduitAPI(http.Controller):
 
     @http.route("/api/dimension_product", auth='none', type='http', methods=['GET'], csrf=False)
@@ -136,7 +136,7 @@ class DimensionProduitAPI(http.Controller):
                 content_type="application/json"
             )
 
-#sales_api -- id existe
+#sales_api -- id existe - deployé
 class PosOrderAPI(http.Controller):
 
     @http.route("/api/pos_ventes", auth='none', type='http', methods=['GET'], csrf=False)
@@ -189,10 +189,11 @@ class PosOrderAPI(http.Controller):
                     "Ref": order.name,
                     "Session": order.session_id.id if order.session_id else "None",
                     "Date de commande": order.date_order,
-                    #"Magasin": order.config_id.id if order.config_id else None,
+                    "Id Magasin": order.config_id.id if order.config_id else None,
                     "Nom du Magasin": order.config_id.name if order.config_id else "None",# ID du magasin
+                    "Id Ticket": order.id,
                     "Ticket de caisse": order.pos_reference,
-                    #"Client id": order.partner_id.id if order.partner_id else None,  # ID du client
+                    "Id Client": order.partner_id.id if order.partner_id else None,  # ID du client
                     "Nom du client": order.partner_id.name if order.partner_id else "",
                     "Caissier": order.employee_id.name if order.employee_id else "",
                     "Nom du vendeur": order.suggestion if order.suggestion else "",
@@ -211,7 +212,7 @@ class PosOrderAPI(http.Controller):
                 content_type="application/json"
             )
 
-#payment_methedo_api -- id existe
+#payment_methedo_api -- id existe - deployé
 class PosPaymentAPI(http.Controller):
 
     @http.route("/api/pos_payments", auth='none', type='http', methods=['GET'], csrf=False)
@@ -259,6 +260,7 @@ class PosPaymentAPI(http.Controller):
                 payment_data.append({
                     "Nom du Magasin": order.config_id.name if order.config_id else "None",
                     "Session": order.session_id.name if order.session_id else "None",
+                    "Id Ticket": order.id,
                     "Ticket de caisse": order.pos_reference,
                     "Caissier": order.employee_id.name if order.employee_id else "None",
                     "Date de commande": order.date_order,
@@ -279,7 +281,7 @@ class PosPaymentAPI(http.Controller):
                 content_type="application/json"
             )
 
-#achat -- vente delete order_id
+#achat -- vente delete order_id - deployé
 class PurchaseOrderAPI(http.Controller):
     @http.route("/api/purchase_orders", auth='none', type='http', methods=['GET'], csrf=False)
     def get_purchase_orders(self,id_fournisseur=None, id_user=None, id_debut=None, id_fin=None, **kwargs):
@@ -307,25 +309,44 @@ class PurchaseOrderAPI(http.Controller):
                 domain.append(('date_approve', '>=', id_debut))
                 domain.append(('date_approve', '<=', id_fin))
 
+            domain.append(('state', 'not in', ['cancel', 'done']))
             purchase_orders = request.env['purchase.order'].sudo().search(domain)
 
             purchase_data = []
             for po in purchase_orders:
                 total_qty = sum(po.order_line.mapped('product_qty'))
                 total_received = sum(po.order_line.mapped('qty_received'))
+                warehouse = po.picking_type_id.warehouse_id if po.picking_type_id else None
+                currency = po.currency_id.name
+                supplier_name = po.partner_id.name if po.partner_id else ""
 
+                # Add "MA - " only if it's EUR
+                if currency == "MAD" and not supplier_name.startswith("MA - "):
+                    supplier_name = "MA - " + supplier_name
+
+                # Manual exchange rate conversion
+                if po.currency_id.name == 'MAD':
+                    converted_total = po.amount_total
+                elif po.currency_id.name == 'EUR':
+                    converted_total = po.amount_total * 11.200000000
+                elif po.currency_id.name == 'USD':
+                    converted_total = po.amount_total * 9.7500000000
+                else:
+                    converted_total = po.amount_total  # fallback if unknown currency
                 purchase_data.append({
                     "Bon De Commande": po.name,
                     "Date de confirmation": po.date_approve,
-                    "Fournisseur": po.partner_id.name if po.partner_id else "",
+                    "Fournisseur": supplier_name,
                     "Livrer à" : po.picking_type_id.name if po.picking_type_id else "",
+                    "Id du Magasin": warehouse.id if warehouse else "",
+                    "Nom du Magasin": warehouse.name if warehouse else "",
                     #"partner_name": po.partner_id.name if po.partner_id else None,
                     #"user_id": po.user_id.id if po.user_id else None,
                     #"Utilisateur": po.user_id.name if po.user_id else None,
                     "Document D'origine": po.origin if po.origin else "",
                     "DD Impot": po.x_studio_dd_impot if po.x_studio_dd_impot else "",
                     "Num Fact Fournisseur": po.x_studio_num_fact_frs if po.x_studio_num_fact_frs else "",
-                    "Total": po.amount_total,
+                    "Total": converted_total,
                     "Quantité commandée": total_qty,
                     "Quantité reçue": total_received
                 })
@@ -341,7 +362,7 @@ class PurchaseOrderAPI(http.Controller):
                 content_type="application/json"
             )
 
-# stock :
+# stock : - deployé
 class InventoryAPI(http.Controller):
 
     @http.route("/api/inventory", auth='none', type='http', methods=['GET'], csrf=False)
@@ -378,11 +399,16 @@ class InventoryAPI(http.Controller):
                     ('product_tmpl_id', '=', product.product_tmpl_id.id),
                     ('pricelist_id.active', '=', True)
                 ], limit=1)
-                product_price = pricelist_item.fixed_price if pricelist_item else None
 
+                product_price = pricelist_item.fixed_price if pricelist_item else None
+                pos_categories = [category.name for category in product.pos_categ_ids] if product.pos_categ_ids else []
                 inventory_data.append({
                     "L'emplacement": line.location_id.complete_name if line.location_id else "",
+                    "ID du Produit": product.id,
                     "Nom du produit": product.display_name if product else "",
+                    "Id Magasin": line.warehouse_id.id if line.warehouse_id.id else "Aucun",
+                    "Nom du Magasin": line.warehouse_id.name if line.warehouse_id.name else "Aucun",
+                    "Categorie POS": ", ".join(pos_categories) if pos_categories else "Aucune",
                     "Categorie": " / ".join(category_path) if category_path else "Non classé",
                     "Quantité en stock": line.inventory_quantity_auto_apply,
                     "Valeur en MAD": line.value,
@@ -401,7 +427,7 @@ class InventoryAPI(http.Controller):
                 content_type="application/json"
             )
 
-#stock valorisation
+#stock valorisation - deployé
 class StockValuationAPI(http.Controller):
 
     @http.route("/api/stock_valuation", auth='none', type='http', methods=['GET'], csrf=False)
@@ -434,10 +460,16 @@ class StockValuationAPI(http.Controller):
             total_value = 0
 
             for record in valuation_records:
+                product = record.product_id
+                pos_category_names = [cat.name for cat in product.pos_categ_ids] if product.pos_categ_ids else [
+                    "Aucune", ]
+
                 valuation_data.append({
                     "Date de création": record.create_date,
                     "Référence": record.reference,
+                    "ID Du Produit": record.product_id.id if record.product_id else "",
                     "Nom Produit": record.product_id.display_name if record.product_id else "",
+                    "Magasin": " / ".join(pos_category_names),
                     "Quantité": record.quantity,
                     "Quantité restante": record.remaining_qty,
                     "Valeur en MAD": record.value,

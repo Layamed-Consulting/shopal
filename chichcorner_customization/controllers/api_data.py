@@ -48,6 +48,7 @@ class DimensionProduitAPI(http.Controller):
             products = request.env['product.template'].sudo().search(domain)
 
             produit_data = []
+
             for product in products:
                 pos_categories = [category.name for category in product.pos_categ_ids] if product.pos_categ_ids else None
 
@@ -76,7 +77,17 @@ class DimensionProduitAPI(http.Controller):
                     location_name = stock.location_id.complete_name
                     stock_quantities[location_name] = stock.quantity
 
+                category_path = []
+                current_category = product.categ_id
+                while current_category:
+                    category_path.insert(0, current_category.name)
+                    current_category = current_category.parent_id
+
+                def get_cat_level(level):
+                    return category_path[level - 1] if len(category_path) >= level else None
+
                 produit_data.append({
+                    "Id du produit": product.id,
                     "Nom du Produit": product.name,
                     "Code barre": product.barcode,
                     "default code": product.default_code,
@@ -84,7 +95,13 @@ class DimensionProduitAPI(http.Controller):
                     "Coût": product.standard_price,
                     "Prix de vente": product_price,
                     "HS Code": product.x_studio_hs_code,
-                    "Collection": product.x_studio_origine_pays,
+                    "Pays Origine": product.x_studio_origine_pays,
+                    "Magasin": get_cat_level(1),
+                    "Gender": get_cat_level(2),
+                    "Type d'article": get_cat_level(3),
+                    "Sous-Marque": get_cat_level(4),
+                    "Collection": get_cat_level(5),
+                    "Catégorie d'article": get_cat_level(6),
                     "Composition": product.x_studio_composition,
                     "Type de produit": product.detailed_type,
                     "Politique de fabrication": product.invoice_policy,
